@@ -4,6 +4,7 @@ setup.cfg
 setup.py
 pyqum/__init__.py
 pyqum/auth.py
+pyqum/authschema.sql
 pyqum/blog.py
 pyqum/bridge.py
 pyqum/display.py

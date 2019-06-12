@@ -17,9 +17,9 @@ from si_prefix import si_format, si_parse
 
 # This will run at server startup
 # Modulars first, only then Benchtops (if and only if we use render_template)
-from pyqum.instrument.modular import AWG, VSA
+# from pyqum.instrument.modular import AWG, VSA
 # seems like AWG's working-instance works differently than VSA's
-awgsess = AWG.InitWithOptions()
+# awgsess = AWG.InitWithOptions()
 from pyqum.instrument.benchtop import DSO, PNA
 # dsobench = DSO.Initiate()
 from pyqum.instrument.dilution import bluefors
