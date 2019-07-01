@@ -4,108 +4,127 @@ $(document).ready(function(){
     $('div.sgcontent#settings').show();
 });
 
-//show debug's page
-$(function() {
-    $('button.sg#debug').bind('click', function() {
-        $('div.sgcontent').hide();
-        $('div.sgcontent#debug').show();
-        $('button.sg').removeClass('selected');
-        $('button.sg#debug').addClass('selected');
+//declare global variables:
+// var sgtype;
+
+//Select model to proceed:
+$(function () {
+    $('button.sg#sgtype').click( function() { /* collecting # of click inside this query-loop! */
+        // Make global variable:
+        window.sgtype = $(this).attr('name');
+        console.log(sgtype)
+        $("i.sg.fa-check").remove();
+        $(this).prepend("<i class='sg fa fa-check' style='font-size:15px;color:green;'></i> ");
+        // connecting to each models:
+        $.getJSON('/mach/sg/connect', {
+            sgtype: sgtype
+        }, function (data) {
+            console.log(data.message);
+            /* Transform the array into a dict */
+            var sgdict = {};
+            $.each(data.linkedsg, function(key, values) { sgdict[values] = key; });
+            if (sgtype in sgdict){
+                // $('select.sg[name="sgtype"]').find('option[value='+sgtype+']').removeClass('close').addClass('connect');
+                $( "i.sg."+sgtype+".fa-refresh" ).remove(); //clear previous icon
+                $('button.sg#sgtype[name='+sgtype+']').removeClass('error').removeClass('close').addClass('connect')
+                // Get ALL value:
+                $('div.sgcontent').hide();
+                $('div.sgcontent#settings').show();
+                $.getJSON('/mach/sg/get', {
+                    sgtype: sgtype
+                }, function(data){
+                    console.log('Getting:\n' + JSON.stringify(data.message));
+                    $('input.sg#settings').addClass('getvalue');
+                    $('input.sg.scale#settings[name="freq"]').val(data.message['frequency'].split(' ')[0]);
+                    $('input.sg.unit#settings[name="freq"]').val(data.message['frequency'].split(' ')[1]);
+                    $('input.sg.scale#settings[name="powa"]').val(data.message['power'].split(" ")[0]);
+                    $('input.sg.unit#settings[name="powa"]').val(data.message['power'].split(' ')[1]);
+                    $('input.sg[name="oupt"]').prop( "checked", Boolean(data.message['rfoutput']) );
+                });
+            } else {$('button.sg#sgtype[name='+sgtype+']').addClass('error');}
+        });
         return false;
     });
+}); 
+ 
+// Set each value on change:
+// RF Output
+$('input.sg[name="oupt"]').change( function () { // the enter key code
+    var oupt = $('input.sg[name="oupt"]').is(':checked')?1:0;
+    $.getJSON('/mach/sg/set/oupt', {
+        sgtype: sgtype, oupt: oupt
+    }, function (data) { 
+        console.log(Date($.now()) + ':\nSetting ' + data.message); 
+        if (oupt==1) {
+            $('button.sg#sgtype[name='+sgtype+']').append(" <i class='sg "+sgtype+" fa fa-wifi' style='font-size:15px;color:green;'></i>");
+        } else {
+            $( "i.sg."+sgtype+".fa-wifi" ).remove();
+        };
+    });
+    return false;
 });
-
-// display log based on sg-model selected
-$('select.sg[name="sgtype"]').change( function() {
-    $('button.sg#log').trigger('click'); //click on log
+// RF Frequency
+$('input.sg[name="freq"]').change( function () { // the enter key code
+    $.getJSON('/mach/sg/set/freq', {
+        sgtype: sgtype,
+        freq: $('input.sg.scale[name="freq"]').val(), frequnit: $('input.sg.unit[name="freq"]').val()
+    }, function (data) { 
+        console.log(Date($.now()) + ':\nSetting ' + data.message);
+        $('input.sg#settings[name="freq"]').removeClass('getvalue').addClass('setvalue');
+    });
+    return false;
+});
+// RF Power
+$('input.sg[name="powa"]').change( function () { // the enter key code
+    $.getJSON('/mach/sg/set/powa', {
+        sgtype: sgtype,
+        powa: $('input.sg.scale[name="powa"]').val(), powaunit: $('input.sg.unit[name="powa"]').val()
+    }, function (data) {
+        console.log(Date($.now()) + ':\nSetting ' + data.message);
+        $('input.sg#settings[name="powa"]').removeClass('getvalue').addClass('setvalue');
+    });
+    return false;
 });
 
 //show log's page
-$(function () {
-    $('button.sg#log').bind('click', function () { // id become #
-        $.getJSON('/mach/sg/log', {
-            sgtype: $('select.sg[name="sgtype"]').val()
-        }, function (data) {
-            $('div.sgcontent').hide();
-            $('div.sgcontent#log').empty();
-            console.log(data.log['frequency']);
-            $.each(data.log, function(key, value) {
-                $('div.sgcontent#log').append($('<h4 style="color: darkblue;"></h4>').text(key + ":\n").
-                append($('<span style="background-color: darkblue; color: white;"></span>').text(JSON.stringify(value))));
-              });
-              $('div.sgcontent#log').show();
-              $('button.sg').removeClass('selected');
-              $('button.sg#log').addClass('selected');
-        });
-        return false;
-    });
-}); 
-
-//show setting's page
-$(function() {
-    $('button.sg#settings').bind('click', function() {
+$('button.sg#log').bind('click', function () { // id become #
+    $.getJSON('/mach/sg/log', {
+        sgtype: sgtype
+    }, function (data) {
         $('div.sgcontent').hide();
-        $('div.sgcontent#settings').show();
+        $('div.sgcontent#log').empty();
+        console.log('Based on INSTRLOG, Freq: ' + data.log['frequency']);
+        $.each(data.log, function(key, value) {
+            $('div.sgcontent#log').append($('<h4 style="color: darkblue;"></h4>').text(key + ":").
+            append($('<span style="background-color: darkblue; color: white;"></span>').text(JSON.stringify(value))));
+        });
+        $('div.sgcontent#log').show();
         $('button.sg').removeClass('selected');
-        $('button.sg#settings').addClass('selected');
-        return false;
+        $('button.sg#log').addClass('selected');
     });
+    return false;
 });
+
+// close & reset = closet OR re-connect
+$('button.sg#closet').bind('click', function () {
+    $.getJSON('/mach/sg/closet', {
+        sgtype: sgtype
+    }, function (data) {
+        console.log(data.message);
+        if (data.message == "Success"){
+            // $('select.sg[name="sgtype"]').find('option[value='+sgtype+']').removeClass('connect').addClass('close')
+                // .prepend("<i class='dso fa fa-file-text-o faa-ring animated fa-4x' style='font-size:15px;color:blue;'></i> ");
+            $( "i.sg."+sgtype+".fa-wifi" ).remove();
+            $('button.sg#sgtype[name='+sgtype+']').removeClass('error').removeClass('connect').addClass('close')
+                .prepend("<i class='sg "+sgtype+" fa fa-refresh' style='font-size:15px;color:green;'></i> ");
+        } else {$('button.sg').addClass('error');}         
+    });
+    return false;
+});
+
 
 //setting on key-press
-$(function () {
-    $('input.sg#settings').keypress(function(e) {
-        var key = e.which;
-        if (key == 13) { $('input.sg#settings').trigger('click'); } }); }); // the enter key code //trigger next click below?
-
-//update settings
-$(function () {
-    $('button.sg#update').bind('click', function () { // the enter key code
-        $.getJSON('/mach/sg/settings', {
-            // input value here:
-            freq: $('input.sg[name="freq"]').val(),
-            powa: $('input.sg[name="powa"]').val(),
-            oupt: $('input.sg[name="oupt"]').is(':checked')?1:0
-        }, function (data) {
-            console.log($('input.sg[name="oupt"]').is(':checked')?1:0);
-            $('div.sgcontent#debug').append($('<h4 style="background-color: lightgreen;"></h4>').text(Date($.now())));
-            $.each(data.message, function(index, value) {
-                $('div.sgcontent#debug').append($('<h4 style="color: black;"></h4>').text(Number(index+1) + ". " + value));
-              });
-            
-        });
-        return false;
-    });
-});
-
-//connect
-$(function () {
-    $('button.sg#connect').bind('click', function () { // id become #
-        $.getJSON('/mach/sg/connect', {
-            // input value here:
-            sgtype: $('select.sg[name="sgtype"]').val()
-        }, function (data) {
-            if (data.message == "Success"){
-                $('button.sg').removeClass('error');
-                $('button.sg#close').removeClass('close');
-                $('button.sg#connect').addClass('connect');}
-            else {$('button.sg').addClass('error');}
-        });
-        return false;
-    });
-}); 
-
-//close
-$(function () {
-    $('button.sg#close').bind('click', function () { // id become #
-        $.getJSON('/mach/sg/close', {
-        }, function (data) {
-            if (data.message == "Success"){
-                $('button.sg').removeClass('error');
-                $('button.sg#connect').removeClass('connect');
-                $('button.sg#close').addClass('close');}
-            else {$('button.sg').addClass('error');}         
-        });
-        return false;
-    });
-}); 
+// $(function () {
+//     $('input.sg#settings').keypress(function(e) {
+//         var key = e.which;
+//         if (key == 13) { $('input.sg#settings').trigger('click'); } }); }); // the enter key code //trigger next click below?

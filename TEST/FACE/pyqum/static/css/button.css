@@ -197,7 +197,7 @@
   box-shadow: 0 0 1px rgba(0, 0, 0, .2) inset, 5px 0 5px -3px rgba(0, 0, 0, .2) inset;
 }
 
-/* Push Button */
+/* 2. Push Button */
 /* html{
 	background:#f0f0f0;
 	padding:20px;
@@ -219,7 +219,7 @@
 	display: block;
 	/* margin: 10px; */
 }
-.push_button#w-95 {
+.push_button.w-95 {
   width:95%;
 }
 .push_button:before {
